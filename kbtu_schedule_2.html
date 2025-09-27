@@ -1,248 +1,304 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Расписание студента</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
-      margin: 0;
-      padding: 0;
+    :root{
+      /* Layout */
+      --pageMax: 1600px;         /* max width on very wide screens */
+      --timeW: 72px;             /* left time column width */
+      --slotH: 64px;             /* fixed row height */
+
+      /* Colors */
+      --bg: #ffffff;
+      --border: #d9dfe6;
+      --headbg: #f8fafc;
+      --infobg: #f3f4f6;
+      --tx: #1f2937;
+      --muted: #6b7280;
+
+      /* Class card (lesson) */
+      --class-bg: #d9e8fb;
+      --class-br: #b4cdec;
+      --class-tx: #0f2847;
+
+      --radius: 6px;
+      --shadow: 0 1px 6px rgba(0,0,0,.06);
     }
-    .header {
-      background-color: #fff;
-      padding: 10px 20px;
-      border-bottom: 1px solid #ddd;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+
+    *{box-sizing:border-box}
+    body{margin:0; font-family:Arial, sans-serif; color:var(--tx); background:var(--bg);}
+
+    /* top bar */
+    .header{
+      background:#f3f4f6; border-bottom:1px solid var(--border);
+      padding:10px 16px; display:flex; align-items:center; justify-content:space-between;
     }
-    .header-left, .header-right {
-      display: flex;
-      align-items: center;
+    .header .title{font-weight:700}
+    .header a{color:#374151; text-decoration:none; margin-left:16px; font-size:14px}
+
+    /* page container (responsive) */
+    .main{width:min(96vw, var(--pageMax)); margin:0 auto; padding:20px;}
+
+    /* info card */
+    .info-card{
+      background:#f3f4f6; border:1px solid var(--border); border-radius:var(--radius);
+      overflow:hidden; margin:0 auto 16px; width:min(760px, 100%); box-shadow:var(--shadow);
     }
-    .header-left a, .header-right a {
-      text-decoration: none;
-      color: #333;
-      margin-right: 20px;
-      font-size: 14px;
+    .info-card__head{background:var(--infobg); padding:10px 12px; font-size:14px;}
+    .row{display:flex; gap:10px; padding:10px 12px; border-top:1px solid var(--border); align-items:center;}
+    .row:nth-child(odd){background:#fafbfc}
+    .row .label{color:#374151; min-width:210px}
+    .row .value{font-weight:600}
+
+    /* filters */
+    .controls{
+      display:flex; align-items:center; justify-content:center; gap:12px;
+      margin:10px 0 18px;
     }
-    .header-left span { font-weight: bold; }
-    .main-container { padding: 20px; }
-    .page-title {
-      display: flex;
-      align-items: center;
-      margin: 20px 0;
-      font-size: 14px;
+    .controls label{font-size:14px; color:#111827}
+    .controls select{
+      padding:6px 8px; border:1px solid #cfd6de; border-radius:4px; background:#fff;
+      box-shadow:0 1px 0 rgba(0,0,0,.02);
     }
-    .page-title .icon {
-      width: 15px;
-      height: 15px;
-      border: 1px solid #999;
-      margin-right: 10px;
+
+    /* placeholder */
+    .hidden{display:none;}
+    .placeholder{
+      background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+      padding:22px; text-align:center; color:var(--muted); font-size:14px; margin-bottom:16px;
+      box-shadow:var(--shadow);
     }
-    .student-info {
-      background-color: #fff;
-      border: 1px solid #ddd;
-      padding: 20px;
-      text-align: center;
-      margin-bottom: 20px;
+
+    /* schedule */
+    .schedule{
+      width:100%;
+      background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+      overflow:hidden; box-shadow:var(--shadow);
     }
-    .student-info h2 { margin: 0 0 10px 0; font-size: 16px; font-weight: normal; }
-    .student-info p { margin: 5px 0; font-size: 14px; color: #555; }
-    .student-info .id-box {
-      border: 1px solid #ccc;
-      padding: 5px 10px;
-      margin: 10px auto;
-      width: 150px;
-      font-size: 12px;
-      color: #777;
+    .grid{
+      display:grid;
+      grid-template-columns: var(--timeW) repeat(7, minmax(150px, 1fr));
+      /* тордың шеттерін де сызамыз — визуалды “бүтін” болу үшін */
+      border-top:1px solid var(--border);
+      border-left:1px solid var(--border);
     }
-    .schedule-controls {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 15px;
-      margin-bottom: 20px;
+
+    /* cells */
+    .grid .head, .grid .cell, .grid .time{
+      border-right:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+      background:#fff;
     }
-    .schedule-controls select {
-      padding: 5px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+    .grid .head{
+      background:var(--headbg); text-align:center; font-weight:700; color:#4b5563;
+      height:40px; display:flex; align-items:center; justify-content:center; padding:10px;
     }
-    .schedule-controls label { font-size: 14px; }
-    .schedule-grid {
-      display: grid;
-      grid-template-columns: 80px repeat(5, 1fr);
-      border-top: 1px solid #ddd;
-      border-left: 1px solid #ddd;
-      background-color: #fff;
+    .grid .time {
+  font-size: 13px;        /* өлшемі (қаласаң 14px жасайсың) */
+  font-weight: 500;       /* мәтінді сәл жуан қылады */
+  color: #374151;         /* қою сұр (қазір #8b97a7 ашық сұр) */
+  height: var(--slotH);
+  line-height: var(--slotH);
+  text-align: center;
+  background: #fff;
+}
+    /* 🔧 FIX: әр ұяшықтың биіктігі бірдей, margin жоқ */
+    .grid .cell{
+      height:var(--slotH);
+      padding:6px 8px;
+      display:flex; align-items:center; /* сабақ блоктарын вертикаль центр */
+      position:relative;
     }
-    .grid-header, .grid-cell {
-      padding: 10px;
-      border-right: 1px solid #ddd;
-      border-bottom: 1px solid #ddd;
-      box-sizing: border-box;
+
+    /* class item */
+    .class{
+      background:var(--class-bg); border:1px solid var(--class-br); color:var(--class-tx);
+      border-radius:6px; padding:6px 8px; font-size:12px; line-height:1.35;
+      margin:0; /* FIX: жолды созбауы үшін */
+      width:100%;
     }
-    .grid-header {
-      background-color: #f7f7f7;
-      text-align: center;
-      font-weight: bold;
-      font-size: 14px;
-      color: #555;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .class strong{display:block; font-size:12px}
+    .class span{display:block; color:#334155; font-size:11px}
+
+    /* tighter on smaller widths */
+    @media (max-width: 1440px){
+      :root{ --slotH: 58px; }
+      .class{ font-size:11.5px }
+      .class strong{ font-size:11.5px }
+      .class span{ font-size:10.5px }
     }
-    .time-slot {
-      height: 60px;
-      position: relative;
-      text-align: center;
-      font-size: 12px;
-      color: #888;
-      border-right: 1px solid #ddd;
-      border-bottom: 1px solid #ddd;
-      line-height: 60px;
-      background-color: #fff;
+    @media (max-width: 1280px){
+      :root{ --slotH: 54px; --timeW: 64px; }
+      .grid{ grid-template-columns: var(--timeW) repeat(7, minmax(130px, 1fr)); }
+      .controls{ flex-wrap:wrap; row-gap:8px; }
     }
-    .grid-cell { position: relative; background-color: #fff; min-height: 60px; }
-    .class-box {
-      background-color: #e6f3ff;
-      border: 1px solid #b3d9ff;
-      padding: 5px;
-      font-size: 12px;
-      text-align: left;
-      border-radius: 4px;
-      line-height: 1.3;
-      overflow: hidden;
-      margin: 4px 0;
-    }
-    .class-box strong { display: block; font-size: 11px; }
-    .class-box span { display: block; font-size: 11px; color: #555; }
   </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="header-left"><span>Расписание студента</span></div>
-  <div class="header-right">
-    <a href="#"></a><a href="#"></a><a href="#">Gmail</a>
-    <a href="#"></a><a href="#"></a><a href="#"></a>
-    <a href="#"></a><a href="#">...</a>
-  </div>
-</div>
-
-<div class="main-container">
-  <div class="page-title">
-    <div class="icon"></div><span>Расписание студента</span>
+  <div class="header">
+    <div class="title">Расписание студента</div>
+    <div>
+      <a href="#">Gmail</a>
+      <a href="#">...</a>
+    </div>
   </div>
 
-  <div class="student-info">
-    <h2>Образовательная программа <strong>Учет и аудит</strong></h2>
-    <div class="id-box">ID 248660502</div>
-    <p>Студент <strong>Алтынбекқызы Жансая</strong></p>
-    <p>Год обучения <strong>2</strong></p>
+  <div class="main">
+    <!-- info card -->
+    <div class="info-card">
+      <div class="info-card__head">Образовательная программа</div>
+      <div class="row"><div class="label">Образовательная программа</div><div class="value">Учет и аудит</div></div>
+      <div class="row"><div class="label">ID</div><div class="value">248660502</div></div>
+      <div class="row"><div class="label">Студент</div><div class="value">Алтынбекқызы Жансая</div></div>
+      <div class="row"><div class="label">Год обучения</div><div class="value">2</div></div>
+    </div>
+
+    <!-- filters -->
+    <div class="controls">
+      <label for="year">Год</label>
+      <select id="year" name="year">
+        <option value="2022-2023">2022-2023</option>
+        <option value="2023-2024">2023-2024</option>
+        <option value="2024-2025">2024-2025</option>
+        <option value="2025-2026" selected>2025-2026</option>
+        <option value="2026-2027">2026-2027</option>
+        <option value="2027-2028">2027-2028</option>
+      </select>
+
+      <label for="semester">Семестр</label>
+      <select id="semester" name="semester">
+        <option value="Осенний" selected>Осенний</option>
+        <option value="Весенний">Весенний</option>
+      </select>
+    </div>
+
+    <!-- placeholder -->
+    <div id="schedule-empty" class="placeholder hidden">
+      Расписание скрыто для выбранных параметров. Выберите год/семестр или загрузите данные.
+    </div>
+
+    <!-- schedule -->
+    <div class="schedule" id="schedule">
+      <div class="grid">
+        <!-- header row -->
+        <div class="head"></div>
+        <div class="head">Пн</div>
+        <div class="head">Вт</div>
+        <div class="head">Ср</div>
+        <div class="head">Чт</div>
+        <div class="head">Пт</div>
+        <div class="head">Сб</div>
+        <div class="head">Вс</div>
+
+        <!-- 08:00 -->
+        <div class="time">08:00</div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+
+        <!-- 09:00 -->
+        <div class="time">09:00</div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        <div class="cell"><div class="class"><strong>MNG1201 Основы менеджмента</strong><span>Самойлов А.А. Л 424 (09:00–10:00)</span></div></div>
+        <div class="cell"></div><div class="cell"></div>
+
+        <!-- 10:00 -->
+        <div class="time">10:00</div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>MNG1202 Введение в маркетинг</strong><span>Турдиев С.А. П 436 (10:00–11:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>MNG1201 Основы менеджмента</strong><span>Самойлов А.А. Л 424 (10:00–11:00)</span></div></div>
+        <div class="cell"></div><div class="cell"></div>
+
+        <!-- 11:00 -->
+        <div class="time">11:00</div>
+        <div class="cell"><div class="class"><strong>PRA101M Учебная практика</strong><span>Асқар С.К. П 455 (11:00–12:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (11:00–12:00)</span></div></div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+
+        <!-- 12:00 -->
+        <div class="time">12:00</div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 216b (12:00–13:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>ECO1216 Принципы микроэкономики</strong><span>Мукашев Е.Б. Л UniX (12:00–13:00)</span></div></div>
+        <div class="cell"></div><div class="cell"></div>
+
+        <!-- 13:00 -->
+        <div class="time">13:00</div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>PRA101M Учебная практика</strong><span>Асқар С.К. П 455 (13:00–14:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>MNG1201 Основы менеджмента</strong><span>Құсайын М.Ж. П 158 (13:00–14:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>ECO1216 Принципы микроэкономики</strong><span>Мукашев Е.Б. Л UniX (13:00–14:00)</span></div></div>
+        <div class="cell"></div><div class="cell"></div>
+
+        <!-- 14:00 -->
+        <div class="time">14:00</div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        <div class="cell"><div class="class"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. П 389 (14:00–15:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>ECO1216 Принципы микроэкономики</strong><span>Мукашев Е.Б. Л UniX (14:00–15:00)</span></div></div>
+        <div class="cell"></div><div class="cell"></div>
+
+        <!-- 15:00 -->
+        <div class="time">15:00</div>
+        <div class="cell"><div class="class"><strong>MNG1201 Основы менеджмента</strong><span>Самойлов А.А. Л 424 (15:00–16:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>MNG1202 Введение в маркетинг</strong><span>Турдиев С.А. Л 388 (15:00–16:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (15:00–16:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. П 389 (15:00–16:00)</span></div></div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+
+        <!-- 16:00 -->
+        <div class="time">16:00</div>
+        <div class="cell"><div class="class"><strong>MNG1201 Основы менеджмента</strong><span>Самойлов А.А. Л 424 (16:00–17:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>MNG1202 Введение в маркетинг</strong><span>Турдиев С.А. Л 388 (16:00–17:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (16:00–17:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (16:00–17:00)</span></div></div>
+        <div class="cell"></div><div class="cell"></div>
+
+        <!-- 17:00 -->
+        <div class="time">17:00</div>
+        <div class="cell"><div class="class"><strong>LAW1101 Основы права</strong><span>Иванов И.И. Л 210 (17:00–18:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (17:00–18:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (17:00–18:00)</span></div></div>
+        <div class="cell"></div><div class="cell"></div>
+
+        <!-- 18:00 -->
+        <div class="time">18:00</div>
+        <div class="cell"><div class="class"><strong>ITC1201 Информатика</strong><span>Петров П.П. Л 305 (18:00–19:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (18:00–19:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (18:00–19:00)</span></div></div>
+        <div class="cell"></div><div class="cell"></div>
+      </div>
+    </div>
   </div>
 
-  <div class="schedule-controls">
-    <label for="year">Год</label><select id="year"><option>2025-2026</option></select>
-    <label for="semester">Семестр</label><select id="semester"><option>Осенний</option></select>
-  </div>
+  <script>
+    const scheduleEl = document.getElementById('schedule');
+    const emptyEl    = document.getElementById('schedule-empty');
+    const yearSel    = document.getElementById('year');
+    const semSel     = document.getElementById('semester');
 
-  <div class="schedule-grid">
-    <div class="grid-header"></div>
-    <div class="grid-header">Пн</div>
-    <div class="grid-header">Вт</div>
-    <div class="grid-header">Ср</div>
-    <div class="grid-header">Чт</div>
-    <div class="grid-header">Пт</div>
+    function onFiltersChange(){
+      scheduleEl.classList.add('hidden');
+      emptyEl.classList.remove('hidden');
 
-    <!-- Time slots -->
-    <!-- 08:00 -->
-    <div class="time-slot">08:00</div>
-    <div class="grid-cell"></div><div class="grid-cell"></div>
-    <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-
-    <!-- 09:00 -->
-    <div class="time-slot">09:00</div>
-    <div class="grid-cell"></div><div class="grid-cell"></div>
-    <div class="grid-cell"></div><div class="grid-cell"></div>
-    <div class="grid-cell"><div class="class-box"><strong>MNG1201 Основы менеджмента</strong><span>Самойлов А.А. Л 424 (09:00–10:00)</span></div></div>
-
-    <!-- 10:00 -->
-    <div class="time-slot">10:00</div>
-    <div class="grid-cell"></div>
-    <div class="grid-cell"><div class="class-box"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
-    <div class="grid-cell"><div class="class-box"><strong>MNG1202 Введение в маркетинг</strong><span>Турдиев С.А. П 436 (10:00–11:00)</span></div></div>
-    <div class="grid-cell"></div>
-    <div class="grid-cell"><div class="class-box"><strong>MNG1201 Основы менеджмента</strong><span>Самойлов А.А. Л 424 (10:00–11:00)</span></div></div>
-
-    <!-- 11:00 -->
-    <div class="time-slot">11:00</div>
-    <div class="grid-cell"><div class="class-box"><strong>PRA101M Учебная практика</strong><span>Асқар С.К. П 455 (11:00–12:00)</span></div></div>
-    <div class="grid-cell"><div class="class-box"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (11:00–12:00)</span></div></div>
-    <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-
-    <!-- 12:00 -->
-    <div class="time-slot">12:00</div>
-    <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-    <div class="grid-cell"><div class="class-box"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 216b (12:00–13:00)</span></div></div>
-    <div class="grid-cell"><div class="class-box"><strong>ECO1216 Принципы микроэкономики</strong><span>Мукашев Е.Б. Л UniX (12:00–13:00)</span></div></div>
-
-    <!-- 13:00 -->
-    <div class="time-slot">13:00</div>
-    <div class="grid-cell"></div>
-    <div class="grid-cell"><div class="class-box"><strong>PRA101M Учебная практика</strong><span>Асқар С.К. П 455 (13:00–14:00)</span></div></div>
-    <div class="grid-cell"></div>
-    <div class="grid-cell"><div class="class-box"><strong>MNG1201 Основы менеджмента</strong><span>Құсайын М.Ж. П 158 (13:00–14:00)</span></div></div>
-    <div class="grid-cell"><div class="class-box"><strong>ECO1216 Принципы микроэкономики</strong><span>Мукашев Е.Б. Л UniX (13:00–14:00)</span></div></div>
-
-    <!-- 14:00 -->
-    <div class="time-slot">14:00</div>
-    <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-    <div class="grid-cell"><div class="class-box"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. П 389 (14:00–15:00)</span></div></div>
-    <div class="grid-cell"><div class="class-box"><strong>ECO1216 Принципы микроэкономики</strong><span>Мукашев Е.Б. Л UniX (14:00–15:00)</span></div></div>
-
-    <!-- 15:00 -->
-    <div class="time-slot">15:00</div>
-    <div class="grid-cell"><div class="class-box"><strong>MNG1201 Основы менеджмента</strong><span>Самойлов А.А. Л 424 (15:00–16:00)</span></div></div>
-    <div class="grid-cell"><div class="class-box"><strong>MNG1202 Введение в маркетинг</strong><span>Турдиев С.А. Л 388 (15:00–16:00)</span></div></div>
-    <div class="grid-cell"><div class="class-box"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (15:00–16:00)</span></div></div>
-    <div class="grid-cell"><div class="class-box"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. П 389 (15:00–16:00)</span></div></div>
-    <div class="grid-cell"></div>
-
-    <!-- 16:00 -->
-    <div class="time-slot">16:00</div>
-    <div class="grid-cell"><div class="class-box"><strong>MNG1201 Основы менеджмента</strong><span>Самойлов А.А. Л 424 (16:00–17:00)</span></div></div>
-    <div class="grid-cell"><div class="class-box"><strong>MNG1202 Введение в маркетинг</strong><span>Турдиев С.А. Л 388 (16:00–17:00)</span></div></div>
-    <div class="grid-cell"><div class="class-box"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (16:00–17:00)</span></div></div>
-    <div class="grid-cell"></div>
-    <div class="grid-cell"><div class="class-box"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (16:00–17:00)</span></div></div>
-
-    <!-- 17:00 -->
-    <div class="time-slot">17:00</div>
-    <div class="grid-cell"><div class="class-box"><strong>LAW1101 Основы права</strong><span>Иванов И.И. Л 210 (17:00–18:00)</span></div></div>
-    <div class="grid-cell"></div>
-    <div class="grid-cell"><div class="class-box"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (17:00–18:00)</span></div></div>
-    <div class="grid-cell"></div>
-    <div class="grid-cell"><div class="class-box"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (17:00–18:00)</span></div></div>
-
-    <!-- 18:00 -->
-    <div class="time-slot">18:00</div>
-    <div class="grid-cell"><div class="class-box"><strong>ITC1201 Информатика</strong><span>Петров П.П. Л 305 (18:00–19:00)</span></div></div>
-    <div class="grid-cell"></div>
-    <div class="grid-cell"><div class="class-box"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (18:00–19:00)</span></div></div>
-    <div class="grid-cell"></div>
-    <div class="grid-cell"><div class="class-box"><strong>HUM1141 Модуль соц.-полит. знаний</strong><span>Кабдолдинова А.А. Л 103 (18:00–19:00)</span></div></div>
-
-    <!-- 19:00 -->
-    <div class="time-slot">19:00</div>
-    <div class="grid-cell"></div><div class="grid-cell"></div>
-    <div class="grid-cell"></div><div class="grid-cell"></div><div class="grid-cell"></div>
-  </div>
-</div>
+      // Статика осы комбинацияға бар:
+      if (yearSel.value === "2025-2026" && semSel.value === "Осенний") {
+        emptyEl.classList.add('hidden');
+        scheduleEl.classList.remove('hidden');
+      }
+    }
+    yearSel.addEventListener('change', onFiltersChange);
+    semSel.addEventListener('change', onFiltersChange);
+  </script>
 </body>
 </html>
