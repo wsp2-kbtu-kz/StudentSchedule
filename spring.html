@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Расписание студента</title>
+  <style>
+    :root{
+      /* Layout */
+      --pageMax: 1600px;         /* max width on very wide screens */
+      --timeW: 72px;             /* left time column width */
+      --slotH: 64px;             /* fixed row height */
+
+      /* Colors */
+      --bg: #ffffff;
+      --border: #d9dfe6;
+      --headbg: #f8fafc;
+      --infobg: #f3f4f6;
+      --tx: #1f2937;
+      --muted: #6b7280;
+
+      /* Class card (lesson) */
+      --class-bg: #d9e8fb;
+      --class-br: #b4cdec;
+      --class-tx: #0f2847;
+
+      --radius: 6px;
+      --shadow: 0 1px 6px rgba(0,0,0,.06);
+    }
+
+    *{box-sizing:border-box}
+    body{margin:0; font-family:Arial, sans-serif; color:var(--tx); background:var(--bg);}
+
+    /* top bar */
+    .header{
+      background:#f3f4f6; border-bottom:1px solid var(--border);
+      padding:10px 16px; display:flex; align-items:center; justify-content:space-between;
+    }
+    .header .title{font-weight:700}
+    .header a{color:#374151; text-decoration:none; margin-left:16px; font-size:14px}
+
+    /* page container (responsive) */
+    .main{width:min(96vw, var(--pageMax)); margin:0 auto; padding:10px;}
+
+    /* info card */
+    .info-card{
+      background:#f3f4f6; border:1px solid var(--border); border-radius:var(--radius);
+      overflow:hidden; margin:0 auto 16px; width:min(760px, 100%); box-shadow:var(--shadow);
+    }
+    .info-card__head{background:var(--infobg); padding:10px 12px; font-size:14px;}
+    .row{display:flex; gap:10px; padding:10px 12px; border-top:1px solid var(--border); align-items:center;}
+    .row:nth-child(odd){background:#fafbfc}
+    .row .label{color:#374151; min-width:220px}
+    .row .value{font-weight:600}
+
+    /* filters */
+    .controls{
+      display:flex; align-items:center; justify-content:center; gap:12px;
+      margin:10px 0 18px;
+    }
+    .controls label{font-size:14px; color:#111827}
+    .controls select{
+      padding:6px 8px; border:1px solid #cfd6de; border-radius:4px; background:#fff;
+      box-shadow:0 1px 0 rgba(0,0,0,.02);
+    }
+
+    /* placeholder */
+    .hidden{display:none;}
+    .placeholder{
+      background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+      padding:22px; text-align:center; color:var(--muted); font-size:14px; margin-bottom:16px;
+      box-shadow:var(--shadow);
+    }
+
+    /* schedule */
+    .schedule{
+      width:100%;
+      background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+      overflow:hidden; box-shadow:var(--shadow);
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: var(--timeW) repeat(7, minmax(150px, 1fr));
+      /* тордың шеттерін де сызамыз — визуалды “бүтін” болу үшін */
+      border-top:1px solid var(--border);
+      border-left:1px solid var(--border);
+    }
+
+    /* cells */
+    .grid .head, .grid .cell, .grid .time{
+      border-right:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+      background:#fff;
+    }
+    .grid .head{
+      background:var(--headbg); text-align:center; font-weight:700; color:#4b5563;
+      height:40px; display:flex; align-items:center; justify-content:center; padding:10px;
+    }
+    .grid .time {
+  font-size: 13px;        /* өлшемі (қаласаң 14px жасайсың) */
+  font-weight: 500;       /* мәтінді сәл жуан қылады */
+  color: #374151;         /* қою сұр (қазір #8b97a7 ашық сұр) */
+  height: var(--slotH);
+  line-height: var(--slotH);
+  text-align: center;
+  background: #fff;
+}
+    /* 🔧 FIX: әр ұяшықтың биіктігі бірдей, margin жоқ */
+    .grid .cell{
+      height:var(--slotH);
+      padding:6px 8px;
+      display:flex; align-items:center; /* сабақ блоктарын вертикаль центр */
+      position:relative;
+    }
+
+    /* class item */
+    .class{
+      background:var(--class-bg); border:1px solid var(--class-br); color:var(--class-tx);
+      border-radius:6px; padding:6px 8px; font-size:12px; line-height:1.35;
+      margin:0; /* FIX: жолды созбауы үшін */
+      width:100%;
+    }
+    .class strong{display:block; font-size:12px}
+    .class span{display:block; color:#334155; font-size:11px}
+
+    /* tighter on smaller widths */
+    @media (max-width: 1440px){
+      :root{ --slotH: 58px; }
+      .class{ font-size:11.5px }
+      .class strong{ font-size:11.5px }
+      .class span{ font-size:10.5px }
+    }
+    @media (max-width: 1280px){
+      :root{ --slotH: 54px; --timeW: 64px; }
+      .grid{ grid-template-columns: var(--timeW) repeat(7, minmax(130px, 1fr)); }
+      .controls{ flex-wrap:wrap; row-gap:8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="title">Расписание студента</div>
+    <div>
+      <a href="#"></a>
+      <a href="#">...</a>
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- info card -->
+    <div class="info-card">
+      
+      <div class="row"><div class="label">Образовательная программа</div><div class="value">Учет и аудит</div></div>
+      <div class="row"><div class="label">ID</div><div class="value">24B660502</div></div>
+      <div class="row"><div class="label">Студент</div><div class="value">Алтынбекқызы Жансая</div></div>
+      <div class="row"><div class="label">Год обучения</div><div class="value">2</div></div>
+    </div>
+
+    <!-- filters -->
+    <div class="controls">
+      <label for="year">Год</label>
+      <select id="year" name="year">
+        <option value="2022-2023">2022-2023</option>
+        <option value="2023-2024">2023-2024</option>
+        <option value="2024-2025">2024-2025</option>
+        <option value="2025-2026" selected>2025-2026</option>
+        <option value="2026-2027">2026-2027</option>
+        <option value="2027-2028">2027-2028</option>
+      </select>
+
+      <label for="semester">Семестр</label>
+      <select id="semester" name="semester">
+        <option value="Осенний" selected>Весенний</option>
+        <option value="Весенний">Осенний</option>
+      </select>
+    </div>
+
+    <!-- placeholder -->
+    <div id="schedule-empty" class="placeholder hidden">
+      Расписание скрыто для выбранных параметров. Выберите год/семестр или загрузите данные.
+    </div>
+
+    <!-- schedule -->
+    <div class="schedule" id="schedule">
+      <div class="grid">
+        <!-- header row -->
+        <div class="head"></div>
+        <div class="head">Пн</div>
+        <div class="head">Вт</div>
+        <div class="head">Ср</div>
+        <div class="head">Чт</div>
+        <div class="head">Пт</div>
+        <div class="head">Сб</div>
+        <div class="head">Вс</div>
+
+        <!-- 08:00 -->
+        <div class="time">08:00</div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
+        <!-- 09:00 -->
+        <div class="time">09:00</div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
+        <!-- 10:00 -->
+        <div class="time">10:00</div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
+        <!-- 11:00 -->
+        <div class="time">11:00</div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
+
+        <!-- 12:00 -->
+        <div class="time">12:00</div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
+        <!-- 13:00 -->
+        <div class="time">13:00</div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
+        <!-- 14:00 -->
+        <div class="time">14:00</div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
+
+        <!-- 15:00 -->
+        <div class="time">15:00</div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
+        <!-- 16:00 -->
+        <div class="time">16:00</div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
+        <!-- 17:00 -->
+        <div class="time">17:00</div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
+        <!-- 18:00 -->
+        <div class="time">18:00</div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"><div class="class"><strong>FIN1318 Бухгалтерский учет I</strong><span>Актугова К.А. Л 441 (10:00–11:00)</span></div></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const scheduleEl = document.getElementById('schedule');
+    const emptyEl    = document.getElementById('schedule-empty');
+    const yearSel    = document.getElementById('year');
+    const semSel     = document.getElementById('semester');
+
+    function onFiltersChange(){
+      scheduleEl.classList.add('hidden');
+      emptyEl.classList.remove('hidden');
+
+      // Статика осы комбинацияға бар:
+      if (yearSel.value === "2025-2026" && semSel.value === "Осенний") {
+        emptyEl.classList.add('hidden');
+        scheduleEl.classList.remove('hidden');
+      }
+    }
+    yearSel.addEventListener('change', onFiltersChange);
+    semSel.addEventListener('change', onFiltersChange);
+  </script>
+</body>
+</html>
